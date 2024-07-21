@@ -1,37 +1,50 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import { useFonts } from 'expo-font';
+import { useEffect, useState } from 'react';
+import { getItem } from '@/utils/asyncStorage';
 SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [fontsLoaded, error] = useFonts({
+    'Inter-Bold': Inter_700Bold,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Regular': Inter_400Regular,
   });
-
   useEffect(() => {
-    if (loaded) {
+    const checkOnboarding = async () => {
+      const onBoarded = await getItem('onboarded');
+      if (onBoarded === '1') {
+        setShowOnboarding(false);
+      } else {
+        setShowOnboarding(true);
+      }
+    };
+
+    checkOnboarding();
+    if (fontsLoaded || error) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded, error]);
 
-  if (!loaded) {
-    return null;
+  if (showOnboarding === null || !fontsLoaded) {
+    return null; // Show a loading screen or nothing until fonts are loaded and onboarding status is checked
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      {showOnboarding === true ? (
+        <Stack.Screen name="index" />
+      ) : (
+        <Stack.Screen name="(auth)" />
+      )}
+    </Stack>
   );
 }
